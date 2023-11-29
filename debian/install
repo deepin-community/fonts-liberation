@@ -1,2 +1,2 @@
-debian/bug/*	usr/share/bug/fonts-liberation
-liberation-fonts-ttf-*/*.ttf		/usr/share/fonts/truetype/liberation/
+debian/bug/* usr/share/bug/fonts-liberation
+*-fonts-ttf-*/*.ttf usr/share/fonts/truetype/liberation

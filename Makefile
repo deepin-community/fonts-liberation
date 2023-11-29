@@ -4,6 +4,7 @@
 # 4web:                        dtto for TTF, WOFF, SVG, and EOT
 
 FONTFORGE    = fontforge
+PYTHON       = python3
 FONTLINT     = fontlint
 
 # TTF->EOT converters in fallback order
@@ -24,19 +25,20 @@ else
 endif
 
 EXPORTSCRIPT = scripts/fontexport.pe
+FONTTOOLSCRIPT = scripts/setisFixedPitch-fonttools.py
+FONTVERSION_UPDATE_SCRIPT = scripts/fontfile_version_update.py
 SCRIPTS      = $(EXPORTSCRIPT) scripts/sfd2ttf.pe scripts/ttf2sfd.pe
-MISCFILES    = AUTHORS ChangeLog COPYING License.txt README TODO
+MISCFILES    = AUTHORS ChangeLog LICENSE README.md TODO
 SRCDIR       = src
 EXPORTDIR    = export
 CHECK_PREFIX = check
 
-VER          = 1.07.4
+VER          = 2.1.5
 NAME         = Liberation
 VARIANTS     = \
     Mono-Regular       Mono-Bold        Mono-Italic       Mono-BoldItalic       \
     Sans-Regular       Sans-Bold        Sans-Italic       Sans-BoldItalic       \
-    Serif-Regular      Serif-Bold       Serif-Italic      Serif-BoldItalic      \
-    SansNarrow-Regular SansNarrow-Bold  SansNarrow-Italic SansNarrow-BoldItalic
+    Serif-Regular      Serif-Bold       Serif-Italic      Serif-BoldItalic      
 
 DISTPREFIX     := liberation-fonts-$(VER)
 DISTPREFIX_TTF := liberation-fonts-ttf-$(VER)
@@ -45,6 +47,9 @@ TTFFILES       := $(addprefix $(EXPORTDIR)/$(NAME), $(VARIANTS:=.ttf))
 
 # keeping backward compatibility for "build"
 all build: ttf-dir
+
+versionupdate:
+	$(PYTHON) $(FONTVERSION_UPDATE_SCRIPT) $(SRCDIR) $(VER)
 
 $(EXPORTDIR):
 	mkdir -p $@
@@ -55,6 +60,11 @@ $(EXPORTDIR):
 FORMATS = ttf
 ttf-dir:: $(SFDFILES)
 	$(FONTFORGE) -script $(EXPORTSCRIPT) -ttf $^
+	$(PYTHON) $(FONTTOOLSCRIPT) src/LiberationMono-*.ttf
+	mv  src/LiberationMono-Regular-fixed.ttf  src/LiberationMono-Regular.ttf
+	mv  src/LiberationMono-Italic-fixed.ttf  src/LiberationMono-Italic.ttf
+	mv  src/LiberationMono-Bold-fixed.ttf  src/LiberationMono-Bold.ttf
+	mv  src/LiberationMono-BoldItalic-fixed.ttf  src/LiberationMono-BoldItalic.ttf
 	mkdir -p $(DISTPREFIX_TTF)
 	mv $(addsuffix .ttf,$(basename $^)) $(DISTPREFIX_TTF)
 
@@ -92,10 +102,15 @@ dist-sfd:: $(SFDFILES)
 	  && mkdir -p $${tempdir}/$(DISTPREFIX)/{src,scripts} \
 	  && cp Makefile $(MISCFILES) $${tempdir}/$(DISTPREFIX) \
 	  && cp $(SFDFILES) $${tempdir}/$(DISTPREFIX)/src \
-	  && cp $(SCRIPTS) $${tempdir}/$(DISTPREFIX)/scripts \
+	  && cp $(SCRIPTS) $(FONTTOOLSCRIPT) $(FONTVERSION_UPDATE_SCRIPT) $${tempdir}/$(DISTPREFIX)/scripts \
 	  && tar Cczvhf $${tempdir} $(DISTPREFIX).tar.gz $(DISTPREFIX) \
 	  || echo 'Problem encountered ($@)'; rm -rf -- $${tempdir}
 dist-ttf: ttf
+	$(PYTHON) $(FONTTOOLSCRIPT) export/LiberationMono-*.ttf
+	mv  export/LiberationMono-Regular-fixed.ttf  export/LiberationMono-Regular.ttf
+	mv  export/LiberationMono-Italic-fixed.ttf  export/LiberationMono-Italic.ttf
+	mv  export/LiberationMono-Bold-fixed.ttf  export/LiberationMono-Bold.ttf
+	mv  export/LiberationMono-BoldItalic-fixed.ttf  export/LiberationMono-BoldItalic.ttf
 	tempdir=$$(mktemp -d) \
 	  && mkdir -p $${tempdir}/$(DISTPREFIX_TTF) \
 	  && cp $(MISCFILES) $(TTFFILES) $${tempdir}/$(DISTPREFIX_TTF) \
@@ -114,7 +129,12 @@ clean: clean-dist
 	rm -rf -- $(DISTPREFIX)* $(DISTPREFIX_TTF)*
 	rm -rf -- $(EXPORTDIR)
 	rm -f -- $(CHECK_PREFIX)_*
+	rm -f src/*.ttf 
 clean-dist:
 	rm -f -- *.tar.gz *.zip
+	
+install:
+	mkdir -p $(DESTDIR)/usr/share/fonts/$(DISTPREFIX_TTF) || true
+	install $(DISTPREFIX_TTF)/* $(DESTDIR)/usr/share/fonts/$(DISTPREFIX_TTF)
 
 .PHONY: all build ttf-dir ttf dist dist-src dist-sfd dist-ttf 4web $(FORMATS) check clean clean-dist
